@@ -276,7 +276,6 @@ $styles = "
             });
         </script>
     <?php else: // عرض فورم تسجيل الدخول ?>
-
         <div class="container login-container">
             <h1>تسجيل الدخول</h1>
             <p>الرجاء إدخال بيانات حساب المدير للمتابعة.</p>
