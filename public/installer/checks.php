@@ -17,6 +17,11 @@ function get_server_checks() {
             'status' => extension_loaded('zip'),
             'fix' => 'يرجى تفعيل إضافة `zip` في ملف php.ini.',
         ],
+        'ssh2' => [
+            'label' => 'SSH2 Extension (for SFTP)',
+            'status' => extension_loaded('ssh2'),
+            'fix' => 'مطلوب فقط إذا كنت تريد استخدام SFTP. يمكن تفعيله من php.ini.',
+        ],
         'config_writable' => [
             'label' => 'Config Directory Writable',
             'path' => __DIR__ . '/../../config',

@@ -261,30 +261,52 @@ try {
     }
 
 
-    // 4. رفع النسخة إلى FTP (إذا تم تفعيله)
-    if (FTP_ENABLED && !empty($backupResult['final_archive']) && file_exists($backupResult['final_archive'])) {
-        log_message("بدء الرفع إلى سيرفر FTP...");
+    // 4. رفع النسخة إلى FTP/SFTP (إذا تم تفعيله)
+    if (FTP_ENABLED && defined('FTP_PROTOCOL') && !empty($backupResult['final_archive']) && file_exists($backupResult['final_archive'])) {
+        log_message("بدء الرفع باستخدام بروتوكول " . strtoupper(FTP_PROTOCOL) . "...");
         $finalArchivePath = $backupResult['final_archive'];
+        $remoteFile = rtrim(FTP_DIR, '/') . '/' . basename($finalArchivePath);
 
-        $conn_id = ftp_connect(FTP_HOST);
-        if ($conn_id === false) {
-            log_message("فشل الاتصال بسيرفر الـ FTP: " . FTP_HOST, 'ERROR');
-        } else {
-            $login_result = ftp_login($conn_id, FTP_USER, FTP_PASS);
-            if ($login_result === false) {
-                log_message("فشل تسجيل الدخول إلى سيرفر الـ FTP كمستخدم: " . FTP_USER, 'ERROR');
-            } else {
-                // تفعيل الوضع السلبي (Passive mode) وهو ضروري في أغلب الحالات
-                ftp_pasv($conn_id, true);
-
-                $remoteFile = rtrim(FTP_DIR, '/') . '/' . basename($finalArchivePath);
-                if (ftp_put($conn_id, $remoteFile, $finalArchivePath, FTP_BINARY)) {
-                    log_message("تم رفع ملف النسخ الاحتياطي بنجاح إلى: " . FTP_HOST . $remoteFile);
+        if (FTP_PROTOCOL === 'ftp') {
+            $conn_id = ftp_connect(FTP_HOST);
+            if ($conn_id) {
+                if (ftp_login($conn_id, FTP_USER, FTP_PASS)) {
+                    ftp_pasv($conn_id, true);
+                    if (!ftp_put($conn_id, $remoteFile, $finalArchivePath, FTP_BINARY)) {
+                        log_message("فشل رفع النسخة الاحتياطية إلى سيرفر الـ FTP.", 'ERROR');
+                    } else {
+                        log_message("تم رفع الملف بنجاح إلى: " . FTP_HOST . $remoteFile);
+                    }
                 } else {
-                    log_message("فشل رفع النسخة الاحتياطية إلى سيرفر الـ FTP.", 'ERROR');
+                    log_message("فشل تسجيل الدخول إلى سيرفر الـ FTP.", 'ERROR');
+                }
+                ftp_close($conn_id);
+            } else {
+                log_message("فشل الاتصال بسيرفر الـ FTP: " . FTP_HOST, 'ERROR');
+            }
+        } elseif (FTP_PROTOCOL === 'sftp') {
+            if (!extension_loaded('ssh2')) {
+                log_message("إضافة SSH2 غير مفعلة. لا يمكن المتابعة مع SFTP.", 'ERROR');
+            } else {
+                $connection = ssh2_connect(FTP_HOST, 22);
+                if ($connection && ssh2_auth_password($connection, FTP_USER, FTP_PASS)) {
+                    $sftp = ssh2_sftp($connection);
+                    $stream = @fopen("ssh2.sftp://$sftp" . $remoteFile, 'w');
+                    if ($stream) {
+                        $file_contents = file_get_contents($finalArchivePath);
+                        if (fwrite($stream, $file_contents) === false) {
+                            log_message("فشل في كتابة الملف إلى سيرفر SFTP.", 'ERROR');
+                        } else {
+                            log_message("تم رفع الملف بنجاح إلى: " . FTP_HOST . $remoteFile);
+                        }
+                        @fclose($stream);
+                    } else {
+                        log_message("فشل في فتح ستريم للكتابة على سيرفر SFTP.", 'ERROR');
+                    }
+                } else {
+                    log_message("فشل الاتصال أو تسجيل الدخول إلى سيرفر الـ SFTP.", 'ERROR');
                 }
             }
-            ftp_close($conn_id);
         }
     }
 
