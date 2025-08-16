@@ -34,6 +34,60 @@
     - **الخطوة 4**: سيقوم المعالج بإنهاء التثبيت وحفظ الإعدادات.
 5.  **أمان**: بعد التثبيت، يوصى بشدة بحذف ملف `public/install.php` من السيرفر.
 
+### إعدادات خادم الويب (مهم للأمان)
+
+لضمان أعلى مستوى من الأمان، يجب أن يشير "مسار الجذر" (Document Root) الخاص بخادم الويب إلى مجلد `public` فقط. هذا يمنع الوصول المباشر عبر الويب إلى ملفات حساسة مثل الإعدادات (`config.php`) أو سكربتات النسخ الاحتياطي.
+
+إليك أمثلة لكيفية تحقيق ذلك في الخوادم الشائعة:
+
+**Apache:**
+
+في ملف إعدادات الـ VirtualHost الخاص بك (e.g., in `/etc/apache2/sites-available/your-site.conf`), تأكد من أن `DocumentRoot` يشير إلى المسار الكامل لمجلد `public`.
+
+```apache
+<VirtualHost *:80>
+    ServerName your-site.com
+    DocumentRoot /path/to/your/project/public
+
+    <Directory /path/to/your/project/public>
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+**Nginx:**
+
+في ملف إعدادات الـ `server` الخاص بك (e.g., in `/etc/nginx/sites-available/your-site`), قم بتعيين `root` إلى المسار الكامل لمجلد `public`.
+
+```nginx
+server {
+    listen 80;
+    server_name your-site.com;
+    root /path/to/your/project/public;
+
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.1-fpm.sock; # تأكد من صحة مسار PHP-FPM
+    }
+}
+```
+
+**OpenLiteSpeed:**
+
+عادةً ما يتم إعداد OpenLiteSpeed من خلال واجهة الإدارة الرسومية (WebAdmin GUI).
+
+1.  اذهب إلى `Virtual Hosts` -> اسم الـ Virtual Host الخاص بك.
+2.  في تبويب `General`, ابحث عن `Document Root`.
+3.  قم بتغيير المسار ليشير إلى `/path/to/your/project/public`.
+4.  احفظ التغييرات وقم بإعادة تشغيل الخادم (`Graceful Restart`).
+
 ## طريقة الاستخدام
 
 - **تسجيل الدخول**: اذهب إلى رابط موقعك وسجل الدخول باستخدام حساب المدير الذي أنشأته.
