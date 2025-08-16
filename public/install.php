@@ -6,21 +6,6 @@ if (file_exists(__DIR__ . '/../install.lock')) {
     die("خطأ: المشروع تم تثبيته بالفعل. يرجى حذف ملف 'install.lock' يدوياً لإعادة التثبيت.");
 }
 
-// --- متغيرات التصميم ---
-$styles = "
-    body { font-family: sans-serif; background-color: #f4f4f9; color: #333; line-height: 1.6; }
-    .container { max-width: 700px; margin: 50px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    h1, h2 { color: #444; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-    th { background-color: #f8f8f8; }
-    .status-ok { color: #28a745; font-weight: bold; }
-    .status-error { color: #dc3545; font-weight: bold; }
-    .btn { display: inline-block; padding: 10px 20px; margin-top: 20px; background-color: #007bff; color: #fff; text-decoration: none; border-radius: 5px; }
-    .btn:hover { background-color: #0056b3; }
-    .btn.disabled { background-color: #ccc; cursor: not-allowed; }
-    .text-right { text-align: right; }
-";
 
 // --- منطق معالجة الفورم ---
 $error = null;
@@ -105,205 +90,209 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_step'])) {
 // --- منطق الخطوات ---
 $step = isset($_GET['step']) ? (int)$_GET['step'] : 1;
 
-function check_php_version() {
-    return version_compare(PHP_VERSION, '7.2.0', '>=');
-}
-
-function check_extension($name) {
-    return extension_loaded($name);
-}
-
-function check_writable($path) {
-    return is_writable($path);
-}
-
 // --- عرض الواجهة ---
 ?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>معالج تثبيت سكربت النسخ الاحتياطي</title>
-    <style><?php echo $styles; ?></style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { background-color: #f0f2f5; }
+        .card { margin-top: 50px; }
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            list-style: none;
+            padding-left: 0;
+        }
+        .progress-bar li {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            color: #adb5bd;
+        }
+        .progress-bar li.active { color: #0d6efd; font-weight: bold; }
+        .progress-bar li::before {
+            content: '';
+            width: 100%;
+            height: 2px;
+            background-color: #dee2e6;
+            position: absolute;
+            top: 50%;
+            left: -50%;
+            z-index: -1;
+        }
+        .progress-bar li:first-child::before { content: none; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>معالج التثبيت</h1>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header text-center bg-white border-0 py-3">
+                        <h1 class="h4">معالج تثبيت سكربت النسخ الاحتياطي</h1>
+                    </div>
+                    <div class="card-body p-4">
+                        <ul class="progress-bar">
+                            <li class="<?php echo $step >= 1 ? 'active' : '' ?>">المتطلبات</li>
+                            <li class="<?php echo $step >= 2 ? 'active' : '' ?>">حساب المدير</li>
+                            <li class="<?php echo $step >= 3 ? 'active' : '' ?>">الإعدادات</li>
+                            <li class="<?php echo $step >= 4 ? 'active' : '' ?>">إنهاء</li>
+                        </ul>
 
-        <?php if ($step === 1): ?>
-            <h2>الخطوة 1: التحقق من متطلبات السيرفر</h2>
-            <?php
-                $checks = [
-                    'PHP Version (>= 7.2.0)' => check_php_version(),
-                    'PDO SQLite Extension' => check_extension('pdo_sqlite'),
-                    'Zip Extension' => check_extension('zip'),
-                    'Config Directory Writable' => check_writable(__DIR__ . '/../config'),
-                    'Backups Directory Writable' => check_writable(__DIR__ . '/../backups'),
-                    'Logs Directory Writable' => check_writable(__DIR__ . '/../logs'),
-                    'Database Directory Writable' => check_writable(__DIR__ . '/../database'),
-                ];
-                $all_ok = !in_array(false, $checks, true);
-            ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>المتطلب</th>
-                        <th>الحالة</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($checks as $label => $status): ?>
-                    <tr>
-                        <td><?php echo $label; ?></td>
-                        <td>
-                            <span class="status-<?php echo $status ? 'ok' : 'error'; ?>">
-                                <?php echo $status ? 'متوفر' : 'غير متوفر أو لا يمكن الكتابة عليه'; ?>
-                            </span>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                        <?php if ($step === 1): ?>
+                            <h2 class="h5 mb-3">الخطوة 1: التحقق من متطلبات السيرفر</h2>
+                            <div id="checks-table">
+                                <?php
+                                    // This block will be replaced by JS, but is needed for non-JS users
+                                    // and initial page load.
+                                    require_once 'installer/checks.php';
+                                    echo render_checks_table();
+                                ?>
+                            </div>
+                            <div class="text-end mt-4">
+                                <button id="recheck-btn" class="btn btn-secondary">إعادة الفحص</button>
+                                <a href="?step=2" id="next-btn" class="btn btn-primary disabled">الخطوة التالية &larr;</a>
+                            </div>
+                        <?php endif; ?>
 
-            <div class="text-right">
-                <?php if ($all_ok): ?>
-                    <a href="?step=2" class="btn">الخطوة التالية &larr;</a>
-                <?php else: ?>
-                    <p class="status-error">يرجى إصلاح المشاكل المذكورة أعلاه ثم إعادة تحميل الصفحة.</p>
-                    <a href="?step=1" class="btn disabled">الخطوة التالية &larr;</a>
-                <?php endif; ?>
+                        <?php if ($step === 2): ?>
+                            <h2 class="h5 mb-3">الخطوة 2: إنشاء حساب المدير</h2>
+                            <?php if ($error): ?><div class="alert alert-danger"><?php echo $error; ?></div><?php endif; ?>
+                            <form method="POST" action="?step=2">
+                                <input type="hidden" name="form_step" value="2">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">اسم المستخدم:</label>
+                                    <input type="text" id="username" name="username" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">كلمة المرور:</label>
+                                    <input type="password" id="password" name="password" class="form-control" required>
+                                </div>
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-primary">الخطوة التالية &larr;</button>
+                                </div>
+                            </form>
+                        <?php endif; ?>
+
+                        <?php if ($step === 3): ?>
+                             <h2 class="h5 mb-3">الخطوة 3: إعدادات النسخ الاحتياطي</h2>
+                            <?php if ($error): ?><div class="alert alert-danger"><?php echo $error; ?></div><?php endif; ?>
+                            <form method="POST" action="?step=3" class="row g-3">
+                                <input type="hidden" name="form_step" value="3">
+                                <div class="col-12"><h5>إعدادات قاعدة البيانات</h5></div>
+                                <div class="col-md-6"><label class="form-label">مستضيف DB:</label><input type="text" name="db_host" value="localhost" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">اسم مستخدم DB:</label><input type="text" name="db_user" value="root" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">كلمة مرور DB:</label><input type="password" name="db_pass" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">اسم قاعدة البيانات:</label><input type="text" name="db_name" required class="form-control"></div>
+
+                                <div class="col-12 mt-4"><h5>إعدادات نسخ الملفات</h5></div>
+                                <div class="col-12"><label class="form-label">المجلدات المصدر (كل مجلد في سطر):</label><textarea name="source_dirs" rows="3" class="form-control" required>/var/www/html</textarea></div>
+                                <div class="col-12"><label class="form-label">ملفات/مجلدات للاستثناء (كل نمط في سطر):</label><textarea name="exclude_patterns" rows="3" class="form-control">node_modules&#10;cache&#10;*.log</textarea></div>
+
+                                <div class="col-12 mt-4"><h5>إعدادات عامة و FTP</h5></div>
+                                <div class="col-md-6"><label class="form-label">الاحتفاظ بالنسخ لمدة (أيام):</label><input type="number" name="keep_days" value="7" class="form-control"></div>
+                                <div class="col-md-6 d-flex align-items-end"><div class="form-check"><input type="checkbox" name="delete_old" value="1" class="form-check-input" checked><label class="form-check-label">حذف النسخ القديمة</label></div></div>
+                                <div class="col-md-6 d-flex align-items-end"><div class="form-check"><input type="checkbox" name="ftp_enabled" value="1" class="form-check-input"><label class="form-check-label">تفعيل FTP</label></div></div>
+                                <div class="col-md-6"><label class="form-label">مستضيف FTP:</label><input type="text" name="ftp_host" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">مستخدم FTP:</label><input type="text" name="ftp_user" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">كلمة مرور FTP:</label><input type="password" name="ftp_pass" class="form-control"></div>
+                                <div class="col-md-12"><label class="form-label">مجلد FTP البعيد:</label><input type="text" name="ftp_dir" value="/backups" class="form-control"></div>
+
+                                <div class="col-12 text-end mt-4">
+                                    <button type="submit" class="btn btn-primary">حفظ وإنهاء التثبيت &larr;</button>
+                                </div>
+                            </form>
+                        <?php endif; ?>
+
+                        <?php if ($step === 4): ?>
+                            <div class="text-center">
+                                <?php
+                                    $install_success = false;
+                                    try {
+                                        if (!isset($_SESSION['install_admin_user'])) { throw new Exception("بيانات المدير غير موجودة في الجلسة."); }
+                                        $db_path = __DIR__ . '/../database/users.db';
+                                        $pdo = new PDO('sqlite:' . $db_path);
+                                        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                                        $pdo->exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL)");
+                                        $stmt = $pdo->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
+                                        $stmt->execute([$_SESSION['install_admin_user']['username'], $_SESSION['install_admin_user']['password_hash']]);
+                                        touch(__DIR__ . '/../install.lock');
+                                        session_destroy();
+                                        $install_success = true;
+                                    } catch (Exception $e) {
+                                        echo "<div class='alert alert-danger'>حدث خطأ فادح: " . $e->getMessage() . "</div>";
+                                    }
+                                ?>
+                                <?php if ($install_success): ?>
+                                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                                    <h2 class="h5 mt-3">تم التثبيت بنجاح!</h2>
+                                    <p class="text-muted">تم إعداد النظام وهو جاهز للاستخدام.</p>
+                                    <div class="alert alert-warning"><strong>ملاحظة هامة:</strong> لأسباب أمنية، يرجى حذف ملف `public/install.php` الآن.</div>
+                                    <a href="index.php" class="btn btn-primary mt-3">الذهاب إلى صفحة تسجيل الدخول &larr;</a>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
-        <?php endif; // End Step 1 ?>
-
-        <?php if ($step === 2): ?>
-            <h2>الخطوة 2: إنشاء حساب المدير</h2>
-            <p>سيتم استخدام هذا الحساب لتسجيل الدخول إلى لوحة التحكم.</p>
-
-            <?php if (isset($error)): ?>
-                <p class="status-error"><?php echo $error; ?></p>
-            <?php endif; ?>
-
-            <form method="POST" action="?step=2">
-                <input type="hidden" name="form_step" value="2">
-                <table style="width:100%">
-                    <tr>
-                        <td style="width: 30%;"><label for="username">اسم المستخدم:</label></td>
-                        <td><input type="text" id="username" name="username" required style="width: 95%; padding: 8px;"></td>
-                    </tr>
-                    <tr>
-                        <td><label for="password">كلمة المرور:</label></td>
-                        <td><input type="password" id="password" name="password" required style="width: 95%; padding: 8px;"></td>
-                    </tr>
-                </table>
-                <div class="text-right">
-                    <button type="submit" class="btn">الخطوة التالية &larr;</button>
-                </div>
-            </form>
-        <?php endif; // End Step 2 ?>
-
-        <?php if ($step === 3): ?>
-            <h2>الخطوة 3: إعدادات النسخ الاحتياطي</h2>
-            <p>الرجاء إدخال تفاصيل النسخ الاحتياطي المطلوبة.</p>
-            <?php if (isset($error)): ?><p class="status-error"><?php echo $error; ?></p><?php endif; ?>
-
-            <form method="POST" action="?step=3">
-                <input type="hidden" name="form_step" value="3">
-
-                <h3>إعدادات قاعدة البيانات (لـ `mysqldump`)</h3>
-                <table>
-                    <tr><td><label>مستضيف DB:</label></td><td><input type="text" name="db_host" value="localhost" class="input-field"></td></tr>
-                    <tr><td><label>اسم مستخدم DB:</label></td><td><input type="text" name="db_user" value="root" class="input-field"></td></tr>
-                    <tr><td><label>كلمة مرور DB:</label></td><td><input type="password" name="db_pass" class="input-field"></td></tr>
-                    <tr><td><label>اسم قاعدة البيانات:</label></td><td><input type="text" name="db_name" required class="input-field"></td></tr>
-                </table>
-
-                <h3>إعدادات نسخ الملفات</h3>
-                <table>
-                    <tr>
-                        <td><label>المجلدات المصدر (كل مجلد في سطر):</label></td>
-                        <td><textarea name="source_dirs" rows="3" class="input-field" required>/var/www/html</textarea></td>
-                    </tr>
-                    <tr>
-                        <td><label>ملفات/مجلدات للاستثناء (كل نمط في سطر):</label></td>
-                        <td><textarea name="exclude_patterns" rows="4" class="input-field">node_modules
-cache
-*.log
-*.tmp</textarea></td>
-                    </tr>
-                </table>
-
-                <h3>إعدادات عامة</h3>
-                <table>
-                    <tr>
-                        <td><label>حذف النسخ القديمة:</label></td>
-                        <td><input type="checkbox" name="delete_old" value="1" checked></td>
-                    </tr>
-                    <tr>
-                        <td><label>الاحتفاظ بالنسخ لمدة (أيام):</label></td>
-                        <td><input type="number" name="keep_days" value="7" class="input-field"></td>
-                    </tr>
-                </table>
-
-                <h3>إعدادات FTP (اختياري)</h3>
-                <table>
-                    <tr><td><label>تفعيل FTP:</label></td><td><input type="checkbox" name="ftp_enabled" value="1"></td></tr>
-                    <tr><td><label>مستضيف FTP:</label></td><td><input type="text" name="ftp_host" class="input-field"></td></tr>
-                    <tr><td><label>مستخدم FTP:</label></td><td><input type="text" name="ftp_user" class="input-field"></td></tr>
-                    <tr><td><label>كلمة مرور FTP:</label></td><td><input type="password" name="ftp_pass" class="input-field"></td></tr>
-                    <tr><td><label>مجلد FTP البعيد:</label></td><td><input type="text" name="ftp_dir" value="/backups" class="input-field"></td></tr>
-                </table>
-                <style>.input-field{width: 95%; padding: 8px;}</style>
-
-                <div class="text-right">
-                    <button type="submit" class="btn">حفظ وإنهاء التثبيت &larr;</button>
-                </div>
-            </form>
-        <?php endif; // End Step 3 ?>
-
-        <?php if ($step === 4): ?>
-            <h2>الخطوة 4: إنهاء التثبيت</h2>
-            <?php
-                $install_success = false;
-                try {
-                    if (!isset($_SESSION['install_admin_user'])) {
-                        throw new Exception("بيانات المدير غير موجودة في الجلسة. يرجى البدء من جديد.");
-                    }
-
-                    $db_path = __DIR__ . '/../database/users.db';
-                    $pdo = new PDO('sqlite:' . $db_path);
-                    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-                    $pdo->exec("CREATE TABLE IF NOT EXISTS users (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username TEXT NOT NULL UNIQUE,
-                        password_hash TEXT NOT NULL
-                    )");
-
-                    $stmt = $pdo->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
-                    $stmt->execute([
-                        $_SESSION['install_admin_user']['username'],
-                        $_SESSION['install_admin_user']['password_hash']
-                    ]);
-
-                    touch(__DIR__ . '/../install.lock');
-                    session_destroy();
-                    $install_success = true;
-
-                } catch (Exception $e) {
-                    echo "<p class='status-error'>حدث خطأ فادح أثناء إنهاء التثبيت: " . $e->getMessage() . "</p>";
-                }
-            ?>
-
-            <?php if ($install_success): ?>
-                <p class="status-ok">تم التثبيت بنجاح!</p>
-                <p>تم حذف بيانات التثبيت المؤقتة وتأمين النظام.</p>
-                <p><strong>ملاحظة هامة:</strong> لأسباب أمنية، يرجى حذف ملف `public/install.php` الآن.</p>
-                <div class="text-right">
-                    <a href="index.php" class="btn">الذهاب إلى صفحة تسجيل الدخول &larr;</a>
-                </div>
-            <?php endif; ?>
-        <?php endif; // End Step 4 ?>
-
+        </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const step = <?php echo $step; ?>;
+
+            if (step === 1) {
+                const recheckBtn = document.getElementById('recheck-btn');
+                const nextBtn = document.getElementById('next-btn');
+                const checksTableDiv = document.getElementById('checks-table');
+
+                function updateNextButtonStatus() {
+                    const allOkInput = document.getElementById('all-checks-ok');
+                    if (allOkInput && allOkInput.value === '1') {
+                        nextBtn.classList.remove('disabled');
+                        nextBtn.setAttribute('aria-disabled', 'false');
+                    } else {
+                        nextBtn.classList.add('disabled');
+                        nextBtn.setAttribute('aria-disabled', 'true');
+                    }
+                }
+
+                updateNextButtonStatus();
+
+                recheckBtn.addEventListener('click', async function() {
+                    recheckBtn.disabled = true;
+                    recheckBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> جاري الفحص...';
+
+                    try {
+                        const response = await fetch('installer/ajax.php?action=run_checks');
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            checksTableDiv.innerHTML = data.html;
+                            updateNextButtonStatus();
+                        }
+                    } catch (error) {
+                        console.error('Re-check failed:', error);
+                    } finally {
+                        recheckBtn.disabled = false;
+                        recheckBtn.innerHTML = 'إعادة الفحص';
+                    }
+                });
+
+                nextBtn.addEventListener('click', function(e) {
+                    if (nextBtn.classList.contains('disabled')) {
+                        e.preventDefault();
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
